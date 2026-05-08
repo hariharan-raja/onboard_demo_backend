@@ -2,11 +2,14 @@ import json
 import os
 import re
 from datetime import datetime
-from openai import OpenAI
+from openai import AzureOpenAI
 from rapidfuzz import fuzz
-# Initialize OpenAI client
-api_key = os.getenv("OPENAI_API_KEY")
-client = OpenAI(api_key=api_key)
+
+client = AzureOpenAI(
+    api_key=os.getenv("OPENAI_API_KEY"),
+    api_version="2024-02-01",
+    azure_endpoint="https://oceanai-openai.openai.azure.com/"
+)
 
 ISSUE_DATA_FILE = "issue_data.json"
 

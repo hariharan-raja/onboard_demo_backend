@@ -40,7 +40,7 @@ app.add_middleware(
 @app.websocket("/ws/audio")
 async def websocket_audio(websocket: WebSocket):
     await websocket.accept()
-    print("🎙️ Client connected")
+    print("[WS] Client connected")
 
     buffer = deque(maxlen=MAX_BUFFER_SIZE)
     client_id = id(websocket)
@@ -50,27 +50,27 @@ async def websocket_audio(websocket: WebSocket):
     try:
         while True:
             if websocket.client_state != WebSocketState.CONNECTED:
-                print("🔌 WebSocket not connected")
+                print("[WS] WebSocket not connected")
                 break
 
             try:
                 chunk = await websocket.receive_bytes()
             except Exception as e:
-                print(f"⚠️ Error receiving bytes: {e}")
+                print(f"[WS] Error receiving bytes: {e}")
                 break
 
             buffer.extend(chunk)
-            print(f"🧠 Buffer size: {len(buffer)} bytes")
+            print(f"[WS] Buffer size: {len(buffer)} bytes")
 
-            if len(buffer) <= SEGMENT_SIZE:
+            if len(buffer) >= SEGMENT_SIZE:
                 segment = bytes(islice(buffer, SEGMENT_SIZE))
-                # for _ in range(SEGMENT_SIZE - OVERLAP_SIZE):
-                #     buffer.popleft()
+                for _ in range(SEGMENT_SIZE - OVERLAP_SIZE):
+                    buffer.popleft()
 
                 try:
                     transcription_result = await transcribe_audio_from_bytes(segment)
                 except Exception as e:
-                    print(f"❌ Transcription error: {e}")
+                    print(f"[WS] Transcription error: {e}")
                     if websocket.client_state == WebSocketState.CONNECTED:
                         try:
                             await websocket.send_text(json.dumps({"error": f"Transcription failed ==> {e}"}))
@@ -86,7 +86,7 @@ async def websocket_audio(websocket: WebSocket):
                         if previous_segments:
                             current_text = merge_transcriptions_with_timestamps(previous_segments, current_segments)
 
-                        print("📝 TRANSCRIPTION:", current_text)
+                        print("[WS] TRANSCRIPTION:", current_text)
 
                         client_histories[client_id].append(current_text)
                         full_history = " ".join(client_histories[client_id])
@@ -98,11 +98,11 @@ async def websocket_audio(websocket: WebSocket):
                             try:
                                 await websocket.send_text(json.dumps(result_json))
                             except Exception as e:
-                                print(f"⚠️ Failed to send result: {e}")
+                                print(f"[WS] Failed to send result: {e}")
 
                         previous_segments = current_segments
                     except Exception as e:
-                        print(f"🚨 Error processing transcript: {e}")
+                        print(f"[WS] Error processing transcript: {e}")
                         if websocket.client_state == WebSocketState.CONNECTED:
                             try:
                                 await websocket.send_text(json.dumps({"error": "Processing failed"}))
@@ -111,19 +111,19 @@ async def websocket_audio(websocket: WebSocket):
                 else:
                     if websocket.client_state == WebSocketState.CONNECTED:
                         try:
-                            await websocket.send_text(json.dumps({"error": f"Transcription failed {e}"}))
+                            await websocket.send_text(json.dumps({"error": "Transcription returned empty"}))
                         except:
                             pass
 
     except WebSocketDisconnect as e:
-        print(f"❌ Client disconnected (code={e.code})")
+        print(f"[WS] Client disconnected (code={e.code})")
 
     except Exception as e:
-        print(f"🔥 WebSocket error: {e}")
+        print(f"[WS] WebSocket error: {e}")
 
     finally:
         client_histories.pop(client_id, None)
-        print("🧹 Cleaned up client history")
+        print("[WS] Cleaned up client history")
 
 
 async def transcribe_audio_from_bytes(audio_bytes: bytes) -> dict:
