@@ -2,11 +2,16 @@ import json
 import os
 import re
 from datetime import datetime
-from openai import OpenAI
+from openai import AzureOpenAI, OpenAI
 
 # Initialize OpenAI client
 api_key_s=os.getenv("OPENAI_API_KEY")
-client = OpenAI(api_key=api_key_s)
+# client = OpenAI(api_key=api_key_s)
+client = AzureOpenAI(
+    api_key=api_key_s,
+    api_version="2024-02-01",
+    azure_endpoint="https://oceanai-openai.openai.azure.com/"
+)
 ISSUE_DATA_FILE = "issue_data.json"
 
 def load_location_data():

@@ -1,0 +1,25 @@
+<html>
+    <script>
+        const ws = new WebSocket("ws://localhost:8000/ws/audio");
+        
+        ws.onopen = () => {
+            console.log("Connected");
+        
+            const data = new Uint8Array([1,2,3,4,5]);
+            ws.send(data);
+        };
+        
+        ws.onmessage = (event) => {
+            console.log("Response:", event.data);
+        };
+        
+        ws.onerror = (e) => {
+            console.log("Error:", e);
+        };
+        </script>
+    <body>
+        <h1>
+            Testing
+        </h1>
+    </body>
+</html>
