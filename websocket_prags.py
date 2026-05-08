@@ -73,7 +73,7 @@ async def websocket_audio(websocket: WebSocket):
                     print(f"❌ Transcription error: {e}")
                     if websocket.client_state == WebSocketState.CONNECTED:
                         try:
-                            await websocket.send_text(json.dumps({"error": "Transcription failed ==> ${e}"}))
+                            await websocket.send_text(json.dumps({"error": f"Transcription failed ==> {e}"}))
                         except:
                             pass
                     continue
@@ -111,7 +111,7 @@ async def websocket_audio(websocket: WebSocket):
                 else:
                     if websocket.client_state == WebSocketState.CONNECTED:
                         try:
-                            await websocket.send_text(json.dumps({"error": "Transcription failed {e}"}))
+                            await websocket.send_text(json.dumps({"error": f"Transcription failed {e}"}))
                         except:
                             pass
 
