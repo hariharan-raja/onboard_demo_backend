@@ -73,7 +73,7 @@ async def websocket_audio(websocket: WebSocket):
                     print(f"❌ Transcription error: {e}")
                     if websocket.client_state == WebSocketState.CONNECTED:
                         try:
-                            await websocket.send_text(json.dumps({"error": "Transcription failed"}))
+                            await websocket.send_text(json.dumps({"error": "Transcription failed ==> ${e}"}))
                         except:
                             pass
                     continue
@@ -111,7 +111,7 @@ async def websocket_audio(websocket: WebSocket):
                 else:
                     if websocket.client_state == WebSocketState.CONNECTED:
                         try:
-                            await websocket.send_text(json.dumps({"error": "Transcription failed"}))
+                            await websocket.send_text(json.dumps({"error": "Transcription failed {e}"}))
                         except:
                             pass
 
@@ -126,6 +126,50 @@ async def websocket_audio(websocket: WebSocket):
         print("🧹 Cleaned up client history")
 
 
+# async def transcribe_audio_from_bytes(audio_bytes: bytes) -> dict:
+#     try:
+#         timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+#         filename = f"temp_{timestamp}.wav"
+
+#         with io.BytesIO() as buffer:
+#             with wave.open(buffer, 'wb') as wf:
+#                 wf.setnchannels(CHANNELS)
+#                 wf.setsampwidth(SAMPLE_WIDTH)
+#                 wf.setframerate(RATE)
+#                 wf.writeframes(audio_bytes)
+#             buffer.seek(0)
+
+#             files = {"file": (filename, buffer, "audio/wav")}
+#             headers = {"Authorization": f"Bearer {api_key}"}
+#             data = {
+#                 "model": "whisper-1",
+#                 "response_format": "verbose_json"
+#             }
+
+#             async with httpx.AsyncClient(timeout=60) as client:
+#                 response = await client.post(
+#                     TRANSCRIPTION_URL,
+#                     headers=headers,
+#                     files=files,
+#                     data=data
+#                 )
+
+#             if response.status_code == 200:
+#                 whisper_json = response.json()
+#                 segments = whisper_json.get("segments", [])
+#                 full_text = " ".join([seg.get("text", "").strip() for seg in segments])
+#                 return {
+#                     "text": full_text,
+#                     "segments": segments
+#                 }
+#             else:
+#                 print("❌ Transcription API error:", response.text)
+#                 return None
+
+#     except Exception as e:
+#         print("❗ Error during transcription:", e)
+#         return None
+
 async def transcribe_audio_from_bytes(audio_bytes: bytes) -> dict:
     try:
         timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
@@ -137,31 +181,37 @@ async def transcribe_audio_from_bytes(audio_bytes: bytes) -> dict:
                 wf.setsampwidth(SAMPLE_WIDTH)
                 wf.setframerate(RATE)
                 wf.writeframes(audio_bytes)
+
             buffer.seek(0)
 
-            files = {"file": (filename, buffer, "audio/wav")}
-            headers = {"Authorization": f"Bearer {api_key}"}
+            files = {
+                "file": (filename, buffer, "audio/wav")
+            }
+
+            headers = {
+                "Authorization": f"Bearer {api_key}"
+            }
+
             data = {
-                "model": "whisper-1",
-                "response_format": "verbose_json"
+                "model": "gpt-4o-mini-transcribe"
             }
 
             async with httpx.AsyncClient(timeout=60) as client:
                 response = await client.post(
-                    TRANSCRIPTION_URL,
+                    "https://api.openai.com/v1/audio/transcriptions",
                     headers=headers,
                     files=files,
                     data=data
                 )
 
             if response.status_code == 200:
-                whisper_json = response.json()
-                segments = whisper_json.get("segments", [])
-                full_text = " ".join([seg.get("text", "").strip() for seg in segments])
+                result = response.json()
+
                 return {
-                    "text": full_text,
-                    "segments": segments
+                    "text": result.get("text", ""),
+                    "raw_response": result
                 }
+
             else:
                 print("❌ Transcription API error:", response.text)
                 return None
@@ -169,7 +219,6 @@ async def transcribe_audio_from_bytes(audio_bytes: bytes) -> dict:
     except Exception as e:
         print("❗ Error during transcription:", e)
         return None
-
 
 if __name__ == "__main__":
     import uvicorn
